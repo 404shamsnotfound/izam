@@ -6,10 +6,30 @@ import { Container, Box, Typography, Grid, Card, CardContent, CardMedia, CardAct
 import { ShoppingCart as ShoppingCartIcon, Logout as LogoutIcon } from '@mui/icons-material';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
-import { useCart } from '../contexts/CartContext';
+import { useCart, CartItem } from '../contexts/CartContext';
+
+// Define Product type
+interface Product {
+    id: number;
+    name: string;
+    description: string;
+    price: number;
+    category: string;
+    stock: number;
+    image?: string;
+}
+
+// Define params interface
+interface ProductParams {
+    page: number;
+    name?: string;
+    category?: string;
+    min_price?: string;
+    max_price?: string;
+}
 
 export default function ProductsPage() {
-    const [products, setProducts] = useState([]);
+    const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [page, setPage] = useState(1);
@@ -18,7 +38,7 @@ export default function ProductsPage() {
     const [categoryFilter, setCategoryFilter] = useState('');
     const [minPrice, setMinPrice] = useState('');
     const [maxPrice, setMaxPrice] = useState('');
-    const [categories, setCategories] = useState([]);
+    const [categories, setCategories] = useState<string[]>([]);
     
     const { logout, user } = useAuth();
     const { addToCart, cart } = useCart();
@@ -31,7 +51,7 @@ export default function ProductsPage() {
     const fetchProducts = async () => {
         setLoading(true);
         try {
-            let params = { page };
+            let params: ProductParams = { page };
             
             if (nameFilter) params.name = nameFilter;
             if (categoryFilter) params.category = categoryFilter;
@@ -39,12 +59,21 @@ export default function ProductsPage() {
             if (maxPrice) params.max_price = maxPrice;
             
             const response = await axios.get('/api/products', { params });
-            setProducts(response.data.data);
-            setTotalPages(response.data.last_page);
+            setProducts(response.data.data as Product[]);
+            
+            // Fix pagination by checking for meta.last_page or just last_page
+            if (response.data.meta && response.data.meta.last_page) {
+                setTotalPages(response.data.meta.last_page);
+            } else if (response.data.last_page) {
+                setTotalPages(response.data.last_page);
+            } else {
+                // Fallback to 1 if no pagination info is available
+                setTotalPages(1);
+            }
             
             // Extract unique categories for filter dropdown
             if (!categoryFilter && response.data.data.length > 0) {
-                const uniqueCategories = [...new Set(response.data.data.map(p => p.category))];
+                const uniqueCategories = [...new Set(response.data.data.map((p: Product) => p.category))];
                 setCategories(uniqueCategories);
             }
         } catch (err) {
@@ -55,7 +84,7 @@ export default function ProductsPage() {
         }
     };
     
-    const handleAddToCart = (product) => {
+    const handleAddToCart = (product: Product) => {
         addToCart(product, 1);
     };
     
@@ -70,10 +99,10 @@ export default function ProductsPage() {
     
     const viewCart = () => {
         // In a real app, navigate to cart page
-        alert('Cart items: ' + cart.map(item => `${item.name} (${item.quantity})`).join(', '));
+        alert('Cart items: ' + cart.map((item: CartItem) => `${item.name} (${item.quantity})`).join(', '));
     };
     
-    const handlePageChange = (event, value) => {
+    const handlePageChange = (_event: React.ChangeEvent<unknown>, value: number) => {
         setPage(value);
         window.scrollTo(0, 0);
     };
@@ -90,7 +119,7 @@ export default function ProductsPage() {
                             Welcome, {user?.name}
                         </Typography>
                         <IconButton color="inherit" onClick={viewCart}>
-                            <Badge badgeContent={cart.reduce((sum, item) => sum + item.quantity, 0)} color="error">
+                            <Badge badgeContent={cart.reduce((sum: number, item: CartItem) => sum + item.quantity, 0)} color="error">
                                 <ShoppingCartIcon />
                             </Badge>
                         </IconButton>
