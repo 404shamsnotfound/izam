@@ -74,4 +74,4 @@ supervisord -c /etc/supervisor/conf.d/supervisord.conf \n\
 EXPOSE 8080
 
 # Start services
-CMD ["/var/www/start.sh"] 
+CMD ["supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"] 
