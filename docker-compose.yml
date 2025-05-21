@@ -59,6 +59,22 @@ services:
     networks:
       - izam-network
 
+  # phpMyAdmin
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: izam-phpmyadmin
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      MYSQL_ROOT_PASSWORD: root_password
+    networks:
+      - izam-network
+    depends_on:
+      - db
+
 networks:
   izam-network:
     driver: bridge

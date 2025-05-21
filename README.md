@@ -11,6 +11,7 @@ This is a full-stack e-commerce application built with Laravel (backend) and Rea
 1. Clone this repository
 2. Start the Docker containers:
    ```
+   docker-compose build --no-cache
    docker-compose up -d
    ```
 3. Install backend dependencies:

@@ -4,8 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>IZAM E-commerce</title>
-    <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Preload critical resources -->
     @php
     $manifestPath = public_path('build/manifest.json');
     $assets = [];
@@ -15,10 +15,16 @@
         $cssFile = $manifest['resources/css/app.css']['file'] ?? null;
         $jsFile = $manifest['resources/js/app.ts']['file'] ?? null;
         
-        if ($cssFile) echo '<link rel="stylesheet" href="/build/'.$cssFile.'">';
+        if ($cssFile) {
+            echo '<link rel="preload" href="/build/'.$cssFile.'" as="style">';
+            echo '<link rel="stylesheet" href="/build/'.$cssFile.'">';
+        }
         if ($jsFile) echo '<script type="module" src="/build/'.$jsFile.'" defer></script>';
     }
     @endphp
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <div id="app"></div>
