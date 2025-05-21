@@ -26,6 +26,9 @@ class ProductRepository extends BaseRepository implements ProductRepositoryInter
     public function filter(array $filters, int $perPage = 10): LengthAwarePaginator
     {
         $query = $this->model->query();
+        
+        // Get current page from request
+        $page = request()->input('page', 1);
 
         // Apply filters
         if (isset($filters['name'])) {
@@ -45,7 +48,8 @@ class ProductRepository extends BaseRepository implements ProductRepositoryInter
         }
 
         // Cache results to improve performance
-        $cacheKey = 'products_' . md5(json_encode($filters));
+        // Include page number in cache key
+        $cacheKey = 'products_' . md5(json_encode($filters) . '_page_' . $page);
         
         return Cache::remember($cacheKey, 600, function () use ($query, $perPage) {
             return $query->paginate($perPage);

@@ -23,11 +23,14 @@ class OrderRepository extends BaseRepository implements OrderRepositoryInterface
      */
     public function getByUser(int $userId, int $perPage = 10): LengthAwarePaginator
     {
+        // Explicitly set the page from request
+        $page = request()->input('page', 1);
+        
         return $this->model
             ->where('user_id', $userId)
             ->with('items.product')
             ->latest()
-            ->paginate($perPage);
+            ->paginate($perPage, ['*'], 'page', $page);
     }
 
     /**

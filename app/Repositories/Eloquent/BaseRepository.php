@@ -37,7 +37,9 @@ abstract class BaseRepository implements RepositoryInterface
      */
     public function paginate(int $perPage = 10, array $columns = ['*']): LengthAwarePaginator
     {
-        return $this->model->paginate($perPage, $columns);
+        // Explicitly set the page from request
+        $page = request()->input('page', 1);
+        return $this->model->paginate($perPage, $columns, 'page', $page);
     }
 
     /**
