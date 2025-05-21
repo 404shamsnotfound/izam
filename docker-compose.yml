@@ -1,0 +1,68 @@
+version: '3'
+
+services:
+  # PHP Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: izam-app
+    restart: unless-stopped
+    working_dir: /var/www
+    volumes:
+      - ./:/var/www
+    networks:
+      - izam-network
+    depends_on:
+      - db
+      - redis
+
+  # Nginx Service
+  nginx:
+    image: nginx:alpine
+    container_name: izam-nginx
+    restart: unless-stopped
+    ports:
+      - "8000:80"
+    volumes:
+      - ./:/var/www
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d
+    networks:
+      - izam-network
+    depends_on:
+      - app
+
+  # Database Service
+  db:
+    image: mysql:8.0
+    container_name: izam-db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: izam_ecommerce
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_PASSWORD: secret
+      MYSQL_USER: izam_user
+      SERVICE_TAGS: dev
+      SERVICE_NAME: mysql
+    volumes:
+      - izam-dbdata:/var/lib/mysql
+    networks:
+      - izam-network
+    ports:
+      - "3306:3306"
+
+  # Redis Service
+  redis:
+    image: redis:alpine
+    container_name: izam-redis
+    restart: unless-stopped
+    networks:
+      - izam-network
+
+networks:
+  izam-network:
+    driver: bridge
+
+volumes:
+  izam-dbdata:
+    driver: local 
