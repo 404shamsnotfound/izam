@@ -59,6 +59,14 @@ RUN composer install --no-interaction --no-dev --optimize-autoloader
 # Install npm dependencies and build assets
 RUN npm ci && npm run build
 
+# Set correct permissions for storage and cache
+RUN chmod -R 775 /var/www/storage /var/www/bootstrap/cache \
+    && chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
+
+# Set permissions for SQLite file
+RUN chmod -R 775 /var/www/database /var/www/storage/database.sqlite
+
+
 # Create startup script
 RUN echo '#!/bin/bash \n\
 php artisan migrate --force \n\
