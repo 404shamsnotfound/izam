@@ -54,7 +54,8 @@ RUN chmod -R 775 /var/www/storage /var/www/bootstrap/cache
 RUN mkdir -p /var/www/database && touch /var/www/database/database.sqlite && chown -R www:www /var/www/database
 
 # Install Composer dependencies
-RUN composer install --no-interaction --no-dev --optimize-autoloader
+# RUN composer install --no-interaction --no-dev --optimize-autoloader
+RUN composer install --no-interaction --optimize-autoloader
 
 # Install npm dependencies and build assets
 RUN npm ci && npm run build
@@ -64,7 +65,7 @@ RUN chmod -R 775 /var/www/storage /var/www/bootstrap/cache \
     && chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
 
 # Set permissions for SQLite file
-RUN chmod -R 775 /var/www/database
+RUN chmod -R 775 /var/www/database /var/www/database/database.sqlite
 
 
 # Create startup script
