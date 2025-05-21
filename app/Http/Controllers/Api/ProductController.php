@@ -3,51 +3,57 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\ProductResource;
 use App\Models\Product;
+use App\Repositories\Interfaces\ProductRepositoryInterface;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class ProductController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * @var ProductRepositoryInterface
      */
-    public function index(Request $request)
+    private ProductRepositoryInterface $productRepository;
+
+    /**
+     * ProductController constructor.
+     * 
+     * @param ProductRepositoryInterface $productRepository
+     */
+    public function __construct(ProductRepositoryInterface $productRepository)
     {
-        $query = Product::query();
+        $this->productRepository = $productRepository;
+    }
 
-        // Filter by name
-        if ($request->has("name")) {
-            $query->where("name", "like", "%" . $request->name . "%");
-        }
+    /**
+     * Display a listing of the resource.
+     * 
+     * @param Request $request
+     * @return AnonymousResourceCollection
+     */
+    public function index(Request $request): AnonymousResourceCollection
+    {
+        $filters = $request->only([
+            'name',
+            'min_price',
+            'max_price',
+            'category',
+        ]);
 
-        // Filter by price range
-        if ($request->has("min_price")) {
-            $query->where("price", ">=", $request->min_price);
-        }
+        $perPage = $request->input('per_page', 10);
+        $products = $this->productRepository->filter($filters, $perPage);
 
-        if ($request->has("max_price")) {
-            $query->where("price", "<=", $request->max_price);
-        }
-
-        // Filter by category
-        if ($request->has("category")) {
-            $query->where("category", $request->category);
-        }
-
-        // Cache results to improve performance
-        $cacheKey = "products_" . md5(json_encode($request->all()));
-        $perPage = $request->input("per_page", 10);
-
-        return Cache::remember($cacheKey, 600, function () use ($query, $perPage) {
-            return $query->paginate($perPage);
-        });
+        return ProductResource::collection($products);
     }
 
     /**
      * Store a newly created resource in storage.
+     * 
+     * @param Request $request
+     * @return ProductResource
      */
-    public function store(Request $request)
+    public function store(Request $request): ProductResource
     {
         $validated = $request->validate([
             "name" => "required|string|max:255",
@@ -58,21 +64,32 @@ class ProductController extends Controller
             "image" => "nullable|string",
         ]);
 
-        return Product::create($validated);
+        $product = $this->productRepository->create($validated);
+        
+        return new ProductResource($product);
     }
 
     /**
      * Display the specified resource.
+     * 
+     * @param int $id
+     * @return ProductResource
      */
-    public function show(Product $product)
+    public function show(int $id): ProductResource
     {
-        return $product;
+        $product = $this->productRepository->find($id);
+        
+        return new ProductResource($product);
     }
 
     /**
      * Update the specified resource in storage.
+     * 
+     * @param Request $request
+     * @param int $id
+     * @return ProductResource
      */
-    public function update(Request $request, Product $product)
+    public function update(Request $request, int $id): ProductResource
     {
         $validated = $request->validate([
             "name" => "sometimes|string|max:255",
@@ -83,16 +100,21 @@ class ProductController extends Controller
             "image" => "nullable|string",
         ]);
 
-        $product->update($validated);
-        return $product;
+        $product = $this->productRepository->update($validated, $id);
+        
+        return new ProductResource($product);
     }
 
     /**
      * Remove the specified resource from storage.
+     * 
+     * @param int $id
+     * @return \Illuminate\Http\Response
      */
-    public function destroy(Product $product)
+    public function destroy(int $id)
     {
-        $product->delete();
+        $this->productRepository->delete($id);
+        
         return response()->json(null, 204);
     }
 }

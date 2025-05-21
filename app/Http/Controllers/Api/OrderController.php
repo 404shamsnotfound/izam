@@ -3,28 +3,60 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\OrderResource;
 use App\Models\Order;
 use App\Models\Product;
+use App\Repositories\Interfaces\OrderRepositoryInterface;
+use App\Repositories\Interfaces\ProductRepositoryInterface;
 use Illuminate\Http\Request;
 use App\Events\OrderPlaced;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class OrderController extends Controller
 {
-    public function __construct()
-    {
+    /**
+     * @var OrderRepositoryInterface
+     */
+    private OrderRepositoryInterface $orderRepository;
+    
+    /**
+     * @var ProductRepositoryInterface
+     */
+    private ProductRepositoryInterface $productRepository;
+    
+    /**
+     * OrderController constructor.
+     * 
+     * @param OrderRepositoryInterface $orderRepository
+     * @param ProductRepositoryInterface $productRepository
+     */
+    public function __construct(
+        OrderRepositoryInterface $orderRepository,
+        ProductRepositoryInterface $productRepository
+    ) {
         $this->middleware("auth:sanctum");
+        $this->orderRepository = $orderRepository;
+        $this->productRepository = $productRepository;
     }
 
     /**
      * Display a listing of the resource.
+     * 
+     * @return AnonymousResourceCollection
      */
-    public function index()
+    public function index(): AnonymousResourceCollection
     {
-        return auth()->user()->orders()->with("items.product")->latest()->paginate(10);
+        $userId = auth()->id();
+        $orders = $this->orderRepository->getByUser($userId, 10);
+        
+        return OrderResource::collection($orders);
     }
 
     /**
      * Store a newly created resource in storage.
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
      */
     public function store(Request $request)
     {
@@ -39,7 +71,7 @@ class OrderController extends Controller
         $items = [];
 
         foreach ($validated["items"] as $item) {
-            $product = Product::findOrFail($item["product_id"]);
+            $product = $this->productRepository->find($item["product_id"]);
 
             // Check if product is in stock
             if ($product->stock < $item["quantity"]) {
@@ -58,37 +90,37 @@ class OrderController extends Controller
             ];
 
             // Decrease stock
-            $product->update([
-                "stock" => $product->stock - $item["quantity"]
-            ]);
+            $this->productRepository->updateStock($product->id, $item["quantity"]);
         }
 
         // Create order
-        $order = Order::create([
+        $orderData = [
             "user_id" => auth()->id(),
             "total" => $total,
             "status" => "pending",
-        ]);
-
-        // Add order items
-        foreach ($items as $item) {
-            $order->items()->create($item);
-        }
+        ];
+        
+        $order = $this->orderRepository->createWithItems($orderData, $items);
 
         // Trigger order placed event
         event(new OrderPlaced($order));
 
         return response()->json([
             "message" => "Order placed successfully",
-            "order" => $order->load("items.product"),
+            "order" => new OrderResource($order),
         ], 201);
     }
 
     /**
      * Display the specified resource.
+     * 
+     * @param int $id
+     * @return OrderResource|\Illuminate\Http\JsonResponse
      */
-    public function show(Order $order)
+    public function show(int $id)
     {
+        $order = $this->orderRepository->findWithRelations($id, ['items.product']);
+        
         // Check if order belongs to authenticated user
         if ($order->user_id !== auth()->id()) {
             return response()->json([
@@ -96,7 +128,7 @@ class OrderController extends Controller
             ], 403);
         }
 
-        return $order->load("items.product");
+        return new OrderResource($order);
     }
 
     /**
