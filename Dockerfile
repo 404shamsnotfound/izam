@@ -64,7 +64,7 @@ RUN chmod -R 775 /var/www/storage /var/www/bootstrap/cache \
     && chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
 
 # Set permissions for SQLite file
-RUN chmod -R 775 /var/www/database /var/www/storage/database.sqlite
+RUN chmod -R 775 /var/www/database
 
 
 # Create startup script
